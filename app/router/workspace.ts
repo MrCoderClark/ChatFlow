@@ -6,6 +6,8 @@ import { requiredAuthMiddleware } from '../middlewares/auth';
 import { requiredWorkspaceMiddleware } from '../middlewares/workspace';
 import { workspaceSchema } from '../schemas/workspace';
 import { init, Organizations } from '@kinde/management-api-js';
+import { standardSecurityMiddleware } from '../middlewares/arcjet/standard';
+import { heavyWriteSecurityMiddleware } from '../middlewares/arcjet/heavy-write';
 
 export const listWorkspaces = base
   .use(requiredAuthMiddleware)
@@ -54,6 +56,8 @@ export const listWorkspaces = base
 
 export const createWorkspace = base
   .use(requiredAuthMiddleware)
+  .use(standardSecurityMiddleware)
+  .use(heavyWriteSecurityMiddleware)
   // .use(requiredWorkspaceMiddleware)
   .route({
     method: 'POST',
@@ -70,10 +74,11 @@ export const createWorkspace = base
   )
   .handler(async ({ context, errors, input }) => {
     // Use KINDE_ISSUER_URL instead of KINDE_DOMAIN for consistency
-    const kindeDomain = process.env.KINDE_ISSUER_URL || process.env.KINDE_DOMAIN;
-    
+    const kindeDomain =
+      process.env.KINDE_ISSUER_URL || process.env.KINDE_DOMAIN;
+
     console.log('Initializing Kinde Management API with domain:', kindeDomain);
-    
+
     init({
       kindeDomain: kindeDomain!,
       clientId: process.env.KINDE_MANAGEMENT_CLIENT_ID!,
