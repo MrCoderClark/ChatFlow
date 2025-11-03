@@ -19,6 +19,7 @@ import {
 } from '@kinde-oss/kinde-auth-nextjs/components';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { CreditCard, LogOutIcon, User } from 'lucide-react';
+import Image from 'next/image';
 
 export const UserNav = () => {
   const {
@@ -34,10 +35,12 @@ export const UserNav = () => {
           border-border/50 hover:bg-accent hover:text-accent-foreground"
         >
           <Avatar>
-            <AvatarImage
+            <Image
               src={getAvatar(user.picture, user.email!)}
               alt="User Image"
+              fill
               className="object-cover"
+              priority={true}
             />
             <AvatarFallback>
               {user.given_name?.slice(0, 2).toUpperCase()}
