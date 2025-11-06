@@ -29,6 +29,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { isDefinedError } from '@orpc/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -37,6 +38,10 @@ export const CreateNewChannel = () => {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const [nameValue, setNameValue] = useState('');
+
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+
+  const router = useRouter();
 
   const form = useForm({
     resolver: zodResolver(ChannelNameSchema),
@@ -56,6 +61,8 @@ export const CreateNewChannel = () => {
 
         form.reset();
         setOpen(false);
+
+        router.push(`/workspace/${workspaceId}/channel/${newChannel.id}`);
       },
       onError: error => {
         if (isDefinedError(error)) {
@@ -117,7 +124,11 @@ export const CreateNewChannel = () => {
               )}
             />
 
-            <Button disabled={createChannelMutation.isPending} type="submit">
+            <Button
+              disabled={createChannelMutation.isPending}
+              type="submit"
+              className="mt-5"
+            >
               {createChannelMutation.isPending
                 ? 'Creating...'
                 : 'Create New Channel'}
