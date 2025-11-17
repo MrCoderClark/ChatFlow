@@ -37,8 +37,21 @@ export const MessageItem = ({ message }: iAppProps) => {
 
         <SafeContent
           className="text-sm break-words prose dark:prose-invert max-w-none mark:text-primary"
-          content={JSON.parse(message.content)}
+          content={message.content as unknown as any}
         />
+
+        {message.imageUrl ? (
+          <div className="mt-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={message.imageUrl}
+              alt="Attachment"
+              className="max-auto max-h-80 rounded-md object-contain"
+              width={512}
+              height={512}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

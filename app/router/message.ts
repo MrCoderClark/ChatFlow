@@ -23,6 +23,7 @@ export const createMessage = base
   .input(createMessageSchema)
   .output(z.custom<Message>())
   .handler(async ({ input, context, errors }) => {
+    console.log('createMessage input:', input);
     const channel = await prisma.channel.findFirst({
       where: {
         id: input.channelId,
@@ -34,10 +35,37 @@ export const createMessage = base
       throw errors.FORBIDDEN();
     }
 
+    let imageUrl = input.imageUrl;
+
+    if (!imageUrl && input.content) {
+      try {
+        const doc = JSON.parse(input.content as string);
+
+        const findImage = (node: any): string | null => {
+          if (node?.type === 'image' && typeof node?.attrs?.src === 'string') {
+            return node.attrs.src;
+          }
+
+          if (Array.isArray(node?.content)) {
+            for (const child of node.content) {
+              const found = findImage(child);
+              if (found) return found;
+            }
+          }
+
+          return null;
+        };
+
+        imageUrl = findImage(doc) ?? undefined;
+      } catch {
+        // ignore JSON parse errors; imageUrl stays undefined
+      }
+    }
+
     const created = await prisma.message.create({
       data: {
         content: input.content,
-        imageUrl: input.imageUrl,
+        imageUrl,
         channelId: input.channelId,
         authorId: context.user.id,
         authorEmail: context.user.email!,
