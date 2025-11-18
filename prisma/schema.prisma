@@ -34,7 +34,8 @@ model Channel {
 model Message {
   id String @id @default(uuid())
   content String
-  imageUrl String?
+  imageUrl String? // Deprecated: kept for backward compatibility
+  fileId String? // UploadMe file ID for fetching fresh signed URLs
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
