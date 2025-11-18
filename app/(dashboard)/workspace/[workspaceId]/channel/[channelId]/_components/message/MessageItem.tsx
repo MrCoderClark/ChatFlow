@@ -2,12 +2,44 @@ import { SafeContent } from '@/components/richt-text-editor/SafeContent';
 import { Message } from '@/lib/generated/prisma/client';
 import { getAvatar } from '@/lib/get-avatar';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
 interface iAppProps {
   message: Message;
 }
 
 export const MessageItem = ({ message }: iAppProps) => {
+  const [signedUrl, setSignedUrl] = useState<string | null>(
+    // Initialize with imageUrl for backward compatibility
+    message.imageUrl || null
+  );
+  const [imageError, setImageError] = useState(false);
+
+  // Fetch fresh signed URL when component mounts if fileId exists
+  useEffect(() => {
+    if (message.fileId) {
+      console.log('MessageItem: Fetching signed URL for fileId:', message.fileId);
+      fetch(`/api/uploadme/files/${message.fileId}/url`)
+        .then(res => {
+          console.log('MessageItem: Response status:', res.status);
+          return res.json();
+        })
+        .then(data => {
+          console.log('MessageItem: Response data:', data);
+          if (data.url) {
+            console.log('MessageItem: Setting signed URL:', data.url);
+            setSignedUrl(data.url);
+          } else {
+            console.error('MessageItem: No URL in response');
+            setImageError(true);
+          }
+        })
+        .catch((err) => {
+          console.error('MessageItem: Error fetching signed URL:', err);
+          setImageError(true);
+        });
+    }
+  }, [message.fileId]);
   return (
     <div className="flex space-x-3 relative p-3 rounded-lg group hover:bg-muted/50">
       <Image
@@ -40,15 +72,14 @@ export const MessageItem = ({ message }: iAppProps) => {
           content={message.content as unknown as any}
         />
 
-        {message.imageUrl ? (
-          <div className="mt-3">
+        {(signedUrl || message.imageUrl) && !imageError ? (
+          <div className="mt-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={message.imageUrl}
+              src={signedUrl || message.imageUrl || ''}
               alt="Attachment"
-              className="max-auto max-h-80 rounded-md object-contain"
-              width={512}
-              height={512}
+              className="max-w-sm max-h-96 rounded-lg border border-border object-contain"
+              onError={() => setImageError(true)}
             />
           </div>
         ) : null}

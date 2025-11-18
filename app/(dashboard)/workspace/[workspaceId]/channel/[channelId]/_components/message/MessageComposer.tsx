@@ -11,7 +11,7 @@ interface iAppProps {
   onSubmit: () => void;
   isSubmitting?: boolean;
   upload: UseAttachmentUploadType;
-  onImageUploaded?: (url: string) => void;
+  onImageUploaded?: (fileId: string, previewUrl: string) => void;
 }
 
 export const MessageComposer = ({
@@ -22,22 +22,23 @@ export const MessageComposer = ({
   upload,
   onImageUploaded,
 }: iAppProps) => {
-  const handleImageUploaded = (url: string) => {
-    console.log('MessageComposer.handleImageUploaded url:', url);
-    upload.setImageUrl(url);
+  const handleImageUploaded = (fileId: string, previewUrl: string) => {
+    console.log('MessageComposer.handleImageUploaded fileId:', fileId, 'previewUrl:', previewUrl);
+    upload.setImageUrl(previewUrl); // Store preview URL for display
+    upload.setFileId(fileId); // Store fileId for database
 
     if (onImageUploaded) {
-      console.log('MessageComposer calling parent onImageUploaded with url:', url);
-      onImageUploaded(url);
+      console.log('MessageComposer calling parent onImageUploaded with fileId:', fileId);
+      onImageUploaded(fileId, previewUrl);
     }
 
-    // Image is now only stored in upload.imageUrl and form.imageUrl
-    // It will be displayed via the preview indicator below the editor
-    // and saved to message.imageUrl in the database
+    // FileId is stored for database, previewUrl is used for immediate display
+    // Fresh signed URLs will be fetched when displaying saved messages
   };
 
   const handleRemoveImage = () => {
     upload.setImageUrl(undefined);
+    upload.setFileId(undefined);
   };
 
   return (

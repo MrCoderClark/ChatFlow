@@ -36,6 +36,7 @@ export const createMessage = base
     }
 
     let imageUrl = input.imageUrl;
+    const fileId = input.fileId;
 
     if (!imageUrl && input.content) {
       try {
@@ -66,6 +67,7 @@ export const createMessage = base
       data: {
         content: input.content,
         imageUrl,
+        fileId,
         channelId: input.channelId,
         authorId: context.user.id,
         authorEmail: context.user.email!,

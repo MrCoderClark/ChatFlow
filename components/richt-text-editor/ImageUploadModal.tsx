@@ -8,7 +8,7 @@ import Image from 'next/image';
 interface ImageUploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImageUploaded?: (url: string) => void;
+  onImageUploaded?: (fileId: string, previewUrl: string) => void;
 }
 
 export function ImageUploadModal({
@@ -83,15 +83,7 @@ export function ImageUploadModal({
       console.log('ImageUploadModal resolved file id:', fileId);
 
       if (!fileId) {
-        // No file ID, but if we at least have a URL from the API response, use it
-        if (fallbackUrl && onImageUploaded) {
-          console.warn('UploadMe response missing file ID, using fallback URL');
-          onImageUploaded(fallbackUrl);
-          // Close modal and reset state
-          handleClose();
-        } else {
-          setError('Upload succeeded but no file ID was returned.');
-        }
+        setError('Upload succeeded but no file ID was returned.');
         return;
       }
 
@@ -131,7 +123,8 @@ export function ImageUploadModal({
       }
 
       if (onImageUploaded) {
-        onImageUploaded(finalUrl);
+        // Pass fileId and preview URL to parent
+        onImageUploaded(fileId, finalUrl);
       }
 
       // Close modal and reset state after successful upload

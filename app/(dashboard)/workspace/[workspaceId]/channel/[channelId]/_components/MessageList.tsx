@@ -6,6 +6,8 @@ import { orpc } from '@/lib/orpc';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/general/EmptyState';
+import { ChevronDown, Loader2 } from 'lucide-react';
 
 export function MessageList() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -23,6 +25,7 @@ export function MessageList() {
       cursor: pageParam,
       limit: 30,
     }),
+    queryKey: ['message.list', channelId],
     initialPageParam: undefined,
     getNextPageParam: lastPage => lastPage.nextCursor,
     select: data => ({
@@ -47,12 +50,13 @@ export function MessageList() {
     refetchOnWindowFocus: false,
   });
 
+  // Scroll to bottom when messages first load
   useEffect(() => {
     if (!hasInitialScrolled && data?.pages.length) {
       const el = scrollRef.current;
 
       if (el) {
-        el.scrollTop = el.scrollHeight;
+        bottomRef.current?.scrollIntoView({ block: 'end' });
 
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setHasInitialScrolled(true);
@@ -60,6 +64,53 @@ export function MessageList() {
       }
     }
   }, [hasInitialScrolled, data?.pages.length]);
+
+  // Keep view pinned to bottom on late content growth (e.g. images)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const scrollToBottomIfNeeded = () => {
+      if (isAtBottom || !hasInitialScrolled) {
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ block: 'end' });
+        });
+      }
+    };
+
+    const onImageLoad = (e: Event) => {
+      if (e.target instanceof HTMLImageElement) {
+        scrollToBottomIfNeeded();
+      }
+    };
+
+    el.addEventListener('load', onImageLoad, true);
+
+    // ResizeObserver watches for size changes in the container
+    const resizeObserver = new ResizeObserver(() => {
+      scrollToBottomIfNeeded();
+    });
+
+    resizeObserver.observe(el);
+
+    // MutationObserver watches for DOM changes (e.g., images loading, content updates)
+    const mutationObserver = new MutationObserver(() => {
+      scrollToBottomIfNeeded();
+    });
+
+    mutationObserver.observe(el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
+
+    return () => {
+      resizeObserver.disconnect();
+      el.removeEventListener('load', onImageLoad, true);
+      mutationObserver.disconnect();
+    };
+  }, [hasInitialScrolled, isAtBottom]);
 
   const isNearBottom = (el: HTMLDivElement) =>
     el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
@@ -79,11 +130,15 @@ export function MessageList() {
         el.scrollTop = newScrollHeight - prevScrollHeight + prevScrollTop;
       });
     }
+
+    setIsAtBottom(isNearBottom(el));
   };
 
   const items = useMemo(() => {
     return data?.pages.flatMap(p => p.items) ?? [];
   }, [data]);
+
+  const isEmpty = !isLoading && !error && items.length === 0;
 
   useEffect(() => {
     if (!items.length) return;
@@ -115,7 +170,7 @@ export function MessageList() {
     const el = scrollRef.current;
     if (!el) return;
 
-    el.scrollTop = el.scrollHeight;
+    bottomRef.current?.scrollIntoView({ block: 'end' });
 
     setNewMessages(false);
     setIsAtBottom(true);
@@ -128,22 +183,44 @@ export function MessageList() {
         ref={scrollRef}
         onScroll={handleScroll}
       >
-        {items?.map(message => (
-          <MessageItem key={message.id} message={message} />
-        ))}
+        {isEmpty ? (
+          <div className="flex h-full pt-4">
+            <EmptyState
+              title="No messages yet"
+              description="Start the conversation by sending the first message"
+              buttonText="Send a message"
+              href="#"
+            />
+          </div>
+        ) : (
+          items?.map(message => (
+            <MessageItem key={message.id} message={message} />
+          ))
+        )}
 
         <div ref={bottomRef}></div>
       </div>
 
-      {newMessages && !isAtBottom ? (
+      {isFetchingNextPage && (
+        <div className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-center py-2">
+          <div className="flex items-center gap-2 rounded-md bg-gradient-to-b from-white/80 to-transparent dark:from-neutral-900/80 backdrop-blur px-3 py-1">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <span>Loading previous messages...</span>
+          </div>
+        </div>
+      )}
+
+      {!isAtBottom && (
         <Button
           type="button"
-          className="absolute bottom-8 right-4 rounded-full"
+          size="sm"
+          className="absolute bottom-4 right-5 z-20 size-10 rounded-full hover:shadow-xl transistion-all duration-200"
           onClick={scrollToBottom}
+          aria-label="Scroll to bottom"
         >
-          New Messages
+          <ChevronDown className="size-4" />
         </Button>
-      ) : null}
+      )}
     </div>
   );
 }
