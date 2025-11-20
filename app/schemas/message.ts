@@ -7,4 +7,10 @@ export const createMessageSchema = z.object({
   fileId: z.string().optional(), // UploadMe file ID
 });
 
+export const updateMessageSchema = z.object({
+  messagelId: z.string(),
+  content: z.string(),
+});
+
 export type CreateMessageSchemaType = z.infer<typeof createMessageSchema>;
+export type UpdateMessageSchemaType = z.infer<typeof updateMessageSchema>;
