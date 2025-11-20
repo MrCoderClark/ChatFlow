@@ -1,5 +1,6 @@
 import { ThemeToggle } from '@/components/theme-toggle';
 import InviteMember from './member/InviteMember';
+import { MemberOverview } from './member/MembersOverview';
 
 interface ChannelHeaderProps {
   channelName: string | undefined;
@@ -11,6 +12,7 @@ export function ChannelHeader({ channelName }: ChannelHeaderProps) {
       <h1 className="text-lg font-semibold">#{channelName}</h1>
 
       <div className="flex items-center space-x-3">
+        <MemberOverview />
         <InviteMember />
         <ThemeToggle />
       </div>
