@@ -3,12 +3,15 @@ import { Message } from '@/lib/generated/prisma/client';
 import { getAvatar } from '@/lib/get-avatar';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { MessageHoverToolbar } from '../toolbar';
+import { EditMessage } from '../toolbar/EditMessage';
 
 interface iAppProps {
   message: Message;
+  currentUserId: string;
 }
 
-export const MessageItem = ({ message }: iAppProps) => {
+export const MessageItem = ({ message, currentUserId }: iAppProps) => {
   const [signedUrl, setSignedUrl] = useState<string | null>(
     // Initialize with imageUrl for backward compatibility
     message.imageUrl || null
@@ -18,7 +21,10 @@ export const MessageItem = ({ message }: iAppProps) => {
   // Fetch fresh signed URL when component mounts if fileId exists
   useEffect(() => {
     if (message.fileId) {
-      console.log('MessageItem: Fetching signed URL for fileId:', message.fileId);
+      console.log(
+        'MessageItem: Fetching signed URL for fileId:',
+        message.fileId
+      );
       fetch(`/api/uploadme/files/${message.fileId}/url`)
         .then(res => {
           console.log('MessageItem: Response status:', res.status);
@@ -34,12 +40,15 @@ export const MessageItem = ({ message }: iAppProps) => {
             setImageError(true);
           }
         })
-        .catch((err) => {
+        .catch(err => {
           console.error('MessageItem: Error fetching signed URL:', err);
           setImageError(true);
         });
     }
   }, [message.fileId]);
+
+  const [isEditing, setIsEditing] = useState(false);
+
   return (
     <div className="flex space-x-3 relative p-3 rounded-lg group hover:bg-muted/50">
       <Image
@@ -67,23 +76,38 @@ export const MessageItem = ({ message }: iAppProps) => {
           </p>
         </div>
 
-        <SafeContent
-          className="text-sm break-words prose dark:prose-invert max-w-none mark:text-primary"
-          content={message.content as unknown as any}
-        />
-
-        {(signedUrl || message.imageUrl) && !imageError ? (
-          <div className="mt-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={signedUrl || message.imageUrl || ''}
-              alt="Attachment"
-              className="max-w-sm max-h-96 rounded-lg border border-border object-contain"
-              onError={() => setImageError(true)}
+        {isEditing ? (
+          <EditMessage
+            message={message}
+            onCancel={() => setIsEditing(false)}
+            onSave={() => setIsEditing(false)}
+          />
+        ) : (
+          <>
+            <SafeContent
+              className="text-sm break-words prose dark:prose-invert max-w-none mark:text-primary"
+              content={message.content as unknown as any}
             />
-          </div>
-        ) : null}
+
+            {(signedUrl || message.imageUrl) && !imageError ? (
+              <div className="mt-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={signedUrl || message.imageUrl || ''}
+                  alt="Attachment"
+                  className="max-w-sm max-h-96 rounded-lg border border-border object-contain"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
+      <MessageHoverToolbar
+        messageId={message.id}
+        canEdit={message.authorId === currentUserId}
+        onEdit={() => setIsEditing(true)}
+      />
     </div>
   );
 };

@@ -5,7 +5,7 @@ import { requiredAuthMiddleware } from '../middlewares/auth';
 import { base } from '../middlewares/base';
 import { requiredWorkspaceMiddleware } from '../middlewares/workspace';
 import prisma from '@/lib/db';
-import { createMessageSchema } from '../schemas/message';
+import { createMessageSchema, updateMessageSchema } from '../schemas/message';
 import { getAvatar } from '@/lib/get-avatar';
 import { Message } from '@/lib/generated/prisma/client';
 
@@ -42,9 +42,20 @@ export const createMessage = base
       try {
         const doc = JSON.parse(input.content as string);
 
-        const findImage = (node: any): string | null => {
-          if (node?.type === 'image' && typeof node?.attrs?.src === 'string') {
-            return node.attrs.src;
+        type ContentNode = {
+          type?: string;
+          attrs?: { src?: string } | Record<string, unknown>;
+          content?: ContentNode[];
+        };
+
+        const findImage = (node: ContentNode | undefined): string | null => {
+          if (
+            node &&
+            node.type === 'image' &&
+            node.attrs &&
+            typeof (node.attrs as { src?: unknown }).src === 'string'
+          ) {
+            return (node.attrs as { src: string }).src;
           }
 
           if (Array.isArray(node?.content)) {
@@ -146,5 +157,60 @@ export const listMessages = base
     return {
       items: messages,
       nextCursor,
+    };
+  });
+
+export const updateMessage = base
+  .use(requiredAuthMiddleware)
+  .use(requiredWorkspaceMiddleware)
+  .use(standardSecurityMiddleware)
+  .use(writeSecurityMiddleware)
+  .route({
+    method: 'PUT',
+    path: '/messages/:messageId',
+    summary: 'Update a message',
+    tags: ['Messages'],
+  })
+  .input(updateMessageSchema)
+  .output(
+    z.object({
+      message: z.custom<Message>(),
+      canEdit: z.boolean(),
+    })
+  )
+  .handler(async ({ input, context, errors }) => {
+    const message = await prisma.message.findFirst({
+      where: {
+        id: input.messagelId,
+        Channel: {
+          workspaceId: context.workspace.orgCode,
+        },
+      },
+      select: {
+        id: true,
+        authorId: true,
+      },
+    });
+
+    if (!message) {
+      throw errors.NOT_FOUND();
+    }
+
+    if (message.authorId !== context.user.id) {
+      throw errors.FORBIDDEN();
+    }
+
+    const updated = await prisma.message.update({
+      where: {
+        id: input.messagelId,
+      },
+      data: {
+        content: input.content,
+      },
+    });
+
+    return {
+      message: updated,
+      canEdit: updated.authorId === context.user.id,
     };
   });
