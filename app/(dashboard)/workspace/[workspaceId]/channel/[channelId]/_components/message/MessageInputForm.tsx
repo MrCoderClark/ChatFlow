@@ -69,6 +69,7 @@ export const MessageInputForm = ({ channelId, user }: iAppProps) => {
           fileId: data.fileId ?? null,
           content: data.content,
           imageUrl: data.imageUrl ?? null,
+          threadId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           authorId: user.id,
@@ -143,8 +144,7 @@ export const MessageInputForm = ({ channelId, user }: iAppProps) => {
         });
 
         // Clear upload state
-        upload.setImageUrl(undefined);
-        upload.setFileId(undefined);
+        upload.clear();
 
         setEditorKey(k => k + 1);
 

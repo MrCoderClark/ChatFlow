@@ -5,6 +5,7 @@ export const createMessageSchema = z.object({
   content: z.string(),
   imageUrl: z.string().optional(), // Deprecated: kept for backward compatibility
   fileId: z.string().optional(), // UploadMe file ID
+  threadId: z.string().optional(),
 });
 
 export const updateMessageSchema = z.object({
